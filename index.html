@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>おみくじ</title>
+  <style>
+    /* 省略（お好きに） */
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <h1>おみくじ</h1>
+  <div id="content">
+    <p>読み込み中...</p>
+  </div>
+</div>
+
+<script>
+const SCRIPT_URL = "★ここにあなたのWebアプリURLを貼り付け★";
+
+// おみくじ候補
+const omikujiData = {
+  "大大吉": "人生最高レベルの運勢！ 思い切り挑戦すれば大成功をつかむでしょう。",
+  "大吉": "非常に良い運勢。大いに期待して行動すると吉。",
+  "中吉": "安定した良い運勢。努力を続ければさらに運気が上昇。",
+  "小吉": "少し嬉しいことが起こりそう。油断せず堅実に。",
+  "吉": "穏やかな幸運が続きます。人との縁を大切に。",
+  "半吉": "そこそこ良い運勢。小さな幸せを味わいましょう。",
+  "末吉": "あとで少しだけ良いことが。焦らず待ってみて。",
+  "末小吉": "わずかながら幸福の兆し。心を穏やかに保てば好転します。",
+  "凶": "少し注意が必要。大きなリスクは避けて。",
+  "小凶": "小さな困難に注意。周囲とのコミュニケーションを大切に。",
+  "半凶": "油断大敵。慎重に行動してトラブルを回避しましょう。",
+  "末凶": "最後でつまずく可能性。計画性を持って行動を。",
+  "大凶": "非常に危うい運勢。しばらくは守りに徹するとよいでしょう。",
+  "大大凶": "最悪の運気。深追いせず、身の安全を最優先に。"
+};
+
+const omikujiResults = Object.keys(omikujiData);
+
+let userIP = null;
+const contentDiv = document.getElementById("content");
+
+// ページ読み込み時
+async function init() {
+  // IP取得
+  try {
+    const res = await fetch("https://api.ipify.org?format=json");
+    const data = await res.json();
+    userIP = data.ip;
+  } catch (e) {
+    console.log("IP取得失敗", e);
+    userIP = "不明";
+  }
+  showInitial();
+}
+
+function showInitial() {
+  contentDiv.innerHTML = "";
+
+  const guide = document.createElement("p");
+  guide.textContent = "お名前を入力して、ボタンを押してください。";
+  contentDiv.appendChild(guide);
+
+  const nameInput = document.createElement("input");
+  nameInput.type = "text";
+  nameInput.id = "userName";
+  nameInput.placeholder = "名前を入力";
+  contentDiv.appendChild(nameInput);
+
+  contentDiv.appendChild(document.createElement("br"));
+
+  const btn = document.createElement("button");
+  btn.textContent = "おみくじを引く";
+  btn.onclick = drawOmikuji;
+  contentDiv.appendChild(btn);
+}
+
+async function drawOmikuji() {
+  const nameInput = document.getElementById("userName");
+  const userName = nameInput.value.trim() || "名無し";
+
+  // ランダムに結果を選択
+  const selected = omikujiResults[Math.floor(Math.random() * omikujiResults.length)];
+
+  // 結果を画面表示
+  showResult(selected);
+
+  // Google Apps Script へ書き込みリクエスト
+  try {
+    const bodyData = {
+      name: userName,
+      result: selected,
+      ip: userIP
+    };
+    const res = await fetch(SCRIPT_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(bodyData)
+    });
+    const json = await res.json();
+    console.log("書き込み結果:", json);
+  } catch (e) {
+    console.error("送信失敗:", e);
+  }
+}
+
+function showResult(result) {
+  contentDiv.innerHTML = "";
+
+  const msg = document.createElement("p");
+  msg.textContent = "あなたのおみくじの結果は…";
+  contentDiv.appendChild(msg);
+
+  const h2 = document.createElement("h2");
+  h2.textContent = result;
+  contentDiv.appendChild(h2);
+
+  if (omikujiData[result]) {
+    const desc = document.createElement("p");
+    desc.textContent = omikujiData[result];
+    contentDiv.appendChild(desc);
+  }
+
+  const retry = document.createElement("button");
+  retry.textContent = "もう一度引く";
+  retry.onclick = showInitial;
+  contentDiv.appendChild(retry);
+}
+
+// ページ初期化
+window.addEventListener("DOMContentLoaded", init);
+</script>
+
+</body>
+</html>
